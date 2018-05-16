@@ -11,35 +11,31 @@ const settings = require('./settings');
 
 const file_accessor = require('./files-accessor');
 
-const sendFiles = (dir, req, res) => {
-  file_accessor.files(path.normalize(dir), (err, files) => {
-    if (err) {
-      if (err.code == 'EACCES') {
-        res.status(400).send('Bad Request');
-      } else if (err.code == 'ENOENT') {
-        res.status(404).send('No such Directory');
-      } else {
-        res.status(500).send('Unhandled Error');
-      }
-      return;
-    }
+router.get('/browse', (req, res) => {
+  file_accessor.files_r(settings.music_root, false, (err, files) => {
     res.send(JSON.stringify(files));
   });
-};
-
-router.get('/browse', (req, res) => {
-  sendFiles('/', req, res);
 });
 
 router.get(['/browse/:file_path*', '/browse/:file_path'], (req, res) => {
-  sendFiles(path.normalize(path.join(req.params.file_path, req.params[0])), req, res);
+  let target_path = file_accessor.constrain(settings.music_root, path.join(req.params.file_path, req.params[0]));
+  if (!target_path) {
+      res.status(500).send();
+      return;
+  }
+  file_accessor.files_r(target_path, false, (err, files) => {
+    res.send(JSON.stringify(files));
+  });
 });
 
 router.get(['/play/:file_path*', '/play/:file_path'], (req, res) => {
-  file_accessor.readStream(path.normalize(path.join(req.params.file_path, req.params[0])), (err, stream) => {
+  let target_path = file_accessor.constrain(settings.music_root, path.join(req.params.file_path, req.params[0]));
+  if (!target_path) {
+      res.status(400).send();
+      return;
+  }
+  file_accessor.readStream(target_path, (err, stream) => {
     if (err) {
-      console.log('err');
-      console.log(err);
       res.status(500).send();
       return;
     }
@@ -50,14 +46,13 @@ router.get(['/play/:file_path*', '/play/:file_path'], (req, res) => {
 });
 
 router.get(['/info/:file_path*', '/info/:file_path'], (req, res) => {
-  let full_path = file_accessor.getAbsolute(settings.root, path.normalize(path.join(req.params.file_path, req.params[0])));
-  if (!file_accessor.verifyPath(full_path)) {
-    res.status(400);
-    res.send("Requested path is unconstrained");
-    return;
+  let target_path = file_accessor.constrain(settings.music_root, path.join(req.params.file_path, req.params[0]));
+  if (!target_path) {
+      res.status(400).send();
+      return;
   }
-  console.log('req for ' + full_path);
-  file_accessor.readTags(full_path, (err, tags) => {
+
+  file_accessor.readTags(target_path, (err, tags) => {
     if (err) {
       console.log('err');
       console.log(err);

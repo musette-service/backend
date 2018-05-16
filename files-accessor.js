@@ -1,6 +1,9 @@
-const fsPromises  = require('fs').promises;
 const fs          = require('fs');
 const util        = require('util');
+const fsPromises  = {
+  readdir:  util.promisify(fs.readdir),
+  stat:     util.promisify(fs.stat),
+};
 const path        = require('path');
 const settings    = require('./settings');
 const jsmediatags = require('jsmediatags');
@@ -9,63 +12,66 @@ module.exports = {
   getAbsolute: (root, target_path) => {
     return path.join(root, target_path);
   },
+  constrain: (base_path, target_path) => {
+    let full_path = path.normalize(path.join(base_path, target_path));
+    if (!full_path.startsWith(base_path)) {
+      return false;
+    }
+    return full_path;
+  },
   isConfined: (root, full_path) => {
     console.log('checking: ' + root + ' vs ' + full_path);
     console.log(full_path.startsWith(root));
     return full_path.startsWith(root);
   },
-  files: (target_path, cb) => {
-    let full_path = module.exports.getAbsolute(settings.root, target_path);
-    if (!module.exports.isConfined(settings.root, full_path)) {
-      const error     = new Error("Requested path is unconstrained");
-      error.code      = 'EACCES';
-      error.name      = 'Bad Request';
-      error.http_code = '400';
-      cb(error, null);
-      return;
-    }
-
-    fsPromises.readdir(full_path)
-    .then((files) => {
-      return Promise.all(files.map(file => {
+  files_r: (base_path, recurse, cb) => {
+    fsPromises.readdir(base_path)
+    .then(items => {
+      items = items.filter(item => {
+        return item[0] != '.';
+      });
+      return Promise.all(items.map(item => {
         return new Promise((resolve, reject) => {
-          const full_file_path = path.join(full_path, file);
-          fsPromises.stat(full_file_path)
+          const total_path = path.join(base_path, item);
+          fsPromises.stat(total_path)
           .then((stats) => {
-            resolve({directory: stats.isDirectory(), name: file});
+            if (stats.isDirectory()) {
+              if (recurse) {
+                module.exports.files_r(total_path, recurse, (err, files) => {
+                  if (err) {
+                    reject(err);
+                    return;
+                  }
+                  resolve({path: item, items: files});
+                });
+              } else {
+                resolve({path: item, items: []});
+              }
+            } else {
+              resolve({path: item});
+            }
           })
-          .catch((err) => {
+          .catch(err => {
             reject(err);
           })
-        });
-      }));
+        })
+      }))
     })
-    .then((files) => {
-      cb(null, files);
+    .then(items => {
+      cb(null, items);
     })
-    .catch((err) => {
+    .catch(err => {
       cb(err, null);
     });
   },
   readStream: (target_path, cb) => {
-
-    let full_path = module.exports.getAbsolute(settings.root, target_path);
-    if (!module.exports.isConfined(settings.root, full_path)) {
-      const error     = new Error("Requested path is unconstrained");
-      error.code      = 'EACCES';
-      error.name      = 'Bad Request';
-      error.http_code = '400';
-      cb(error, null);
-      return;
-    }
-
-    fsPromises.stat(full_path)
+    fsPromises.stat(target_path)
     .then((stats) => {
       if (stats.isDirectory()) {
         cb(new Error("is dir"), null);
         return;
       }
-      let ret = fs.createReadStream(full_path);
+      let ret = fs.createReadStream(target_path);
       cb(null, ret);
     })
     .catch((err) => {
@@ -83,7 +89,7 @@ module.exports = {
     });
   },
   verifyPath: (target_path) => {
-    if (!module.exports.isConfined(settings.root, target_path)) {
+    if (!module.exports.isConfined(settings.music_root, target_path)) {
       return false;
     }
     return true;
