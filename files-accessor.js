@@ -72,6 +72,8 @@ module.exports = {
         return;
       }
       let ret = fs.createReadStream(target_path);
+      // Probably shouldn't do this.
+      ret.size = stats.size;
       cb(null, ret);
     })
     .catch((err) => {

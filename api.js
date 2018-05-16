@@ -4,8 +4,7 @@ const router = express.Router();
 
 const path = require('path');
 
-const ThrottleGroup = require('stream-throttle').ThrottleGroup
-const tg = new ThrottleGroup({rate: 131072});
+const brake = require('brake');
 
 const settings = require('./settings');
 
@@ -40,8 +39,10 @@ router.get(['/play/:file_path*', '/play/:file_path'], (req, res) => {
       return;
     }
     res.status(200);
-    let throttle = stream.pipe(tg.throttle());
-    throttle.pipe(res);
+
+    res.sendSeekable(stream.pipe(brake({rate: 256000, period: 1000})), {
+      length: stream.size
+    });
   });
 });
 
