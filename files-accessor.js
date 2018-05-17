@@ -7,6 +7,7 @@ const fsPromises  = {
 const path        = require('path');
 const settings    = require('./settings');
 const jsmediatags = require('jsmediatags');
+const mime        = require('mime-types');
 
 module.exports = {
   getAbsolute: (root, target_path) => {
@@ -20,8 +21,6 @@ module.exports = {
     return full_path;
   },
   isConfined: (root, full_path) => {
-    console.log('checking: ' + root + ' vs ' + full_path);
-    console.log(full_path.startsWith(root));
     return full_path.startsWith(root);
   },
   files_r: (base_path, recurse, cb) => {
@@ -48,7 +47,12 @@ module.exports = {
                 resolve({path: item, items: []});
               }
             } else {
-              resolve({path: item});
+              let mime_type = mime.lookup(item);
+              if (!mime_type || !mime_type.startsWith('audio/')) {
+                resolve();
+              } else {
+                resolve({path: item});
+              }
             }
           })
           .catch(err => {
@@ -58,7 +62,7 @@ module.exports = {
       }))
     })
     .then(items => {
-      cb(null, items);
+      cb(null, items.filter((item) => { if (item) return item; }));
     })
     .catch(err => {
       cb(err, null);
@@ -120,7 +124,6 @@ module.exports = {
           }));
         })
         .then((tags) => {
-          console.log("OH");
           console.log(tags);
           cb(null, tags);
         })
