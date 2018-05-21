@@ -52,16 +52,16 @@ router.get(['/info/:file_path*', '/info/:file_path', '/info/'], (req, res) => {
   let base_path = req.params.file_path ? path.join(req.params.file_path, req.params[0]) : '';
   let cached_art = req.query.art || [];
 
-  let pending = req.query.files.length;
+  let pending = req.query.tracks.length;
   let matches = {
     art: {},
     tracks: []
   };
-  for (let i = 0; i < req.query.files.length; i++) {
-    let target_path = file_accessor.constrain(settings.music_root, path.join(base_path, req.query.files[i]));
+  for (let i = 0; i < req.query.tracks.length; i++) {
+    let target_path = file_accessor.constrain(settings.music_root, path.join(base_path, req.query.tracks[i]));
     if (!target_path) {
       // 400
-      matches.tracks[i] = Object.assign({filename: path.join(base_path, req.query.files[i]), err: 400});
+      matches.tracks[i] = Object.assign({filename: path.join(base_path, req.query.tracks[i]), err: 400});
       pending--;
       continue;
     }
@@ -70,10 +70,10 @@ router.get(['/info/:file_path*', '/info/:file_path', '/info/'], (req, res) => {
       if (err) {
         console.log(err);
         // 500
-        matches.tracks[i] = Object.assign({filename: path.join(base_path, req.query.files[i]), err: 500});
+        matches.tracks[i] = Object.assign({filename: path.join(base_path, req.query.tracks[i]), err: 500});
         return;
       }
-      matches.tracks[i] = Object.assign({filename: path.join(base_path, req.query.files[i])}, tags);
+      matches.tracks[i] = Object.assign({filename: path.join(base_path, req.query.tracks[i])}, tags);
       if (pending == 0) {
         for (let i = 0; i < matches.tracks.length; i++) {
           if (matches.tracks[i].picture) {
