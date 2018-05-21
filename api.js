@@ -10,6 +10,8 @@ const settings = require('./settings');
 
 const file_accessor = require('./files-accessor');
 
+const crypto = require('crypto');
+
 router.get('/browse', (req, res) => {
   file_accessor.files_r(settings.music_root, false, (err, files) => {
     res.send(JSON.stringify(files));
@@ -46,22 +48,49 @@ router.get(['/play/:file_path*', '/play/:file_path'], (req, res) => {
   });
 });
 
-router.get(['/info/:file_path*', '/info/:file_path'], (req, res) => {
-  let target_path = file_accessor.constrain(settings.music_root, path.join(req.params.file_path, req.params[0]));
-  if (!target_path) {
-      res.status(400).send();
-      return;
-  }
+router.get(['/info/:file_path*', '/info/:file_path', '/info/'], (req, res) => {
+  let base_path = req.params.file_path ? path.join(req.params.file_path, req.params[0]) : '';
+  let cached_art = req.query.art || [];
 
-  file_accessor.readTags(target_path, (err, tags) => {
-    if (err) {
-      console.log('err');
-      console.log(err);
-      res.status(500).send();
-      return;
+  let pending = req.query.files.length;
+  let matches = {
+    art: {},
+    tracks: []
+  };
+  for (let i = 0; i < req.query.files.length; i++) {
+    let target_path = file_accessor.constrain(settings.music_root, path.join(base_path, req.query.files[i]));
+    if (!target_path) {
+      // 400
+      matches.tracks[i] = Object.assign({filename: path.join(base_path, req.query.files[i]), err: 400});
+      pending--;
+      continue;
     }
-    res.send(JSON.stringify(tags));
-  });
+    file_accessor.readTags(target_path, (err, tags) => {
+      pending--;
+      if (err) {
+        console.log(err);
+        // 500
+        matches.tracks[i] = Object.assign({filename: path.join(base_path, req.query.files[i]), err: 500});
+        return;
+      }
+      matches.tracks[i] = Object.assign({filename: path.join(base_path, req.query.files[i])}, tags);
+      if (pending == 0) {
+        for (let i = 0; i < matches.tracks.length; i++) {
+          if (matches.tracks[i].picture) {
+            let hash = crypto.createHash('sha256');
+            hash.update(Uint8Array.from(matches.tracks[i].picture.data));
+            let val = hash.digest('hex');
+            // Only send the artwork if it was not included as part of the query
+            if (cached_art.indexOf(val) == -1 && !matches.art[val]) {
+              matches.art[val] = matches.tracks[i].picture;
+            }
+            matches.tracks[i].picture = val;
+          }
+        }
+        res.send(JSON.stringify(matches));
+      }
+    });
+  }
 });
 
 module.exports = router;

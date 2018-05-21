@@ -85,9 +85,11 @@ module.exports = {
     })
   },
   readTag: (target_path, cb) => {
-    jsmediatags.read(target_path, {
+    new jsmediatags.Reader(target_path)
+    .setTagsToRead(['title', 'artist', 'album', 'track', 'picture'])
+    .read({
       onSuccess: tag => {
-        cb(null, tag.tags);
+        cb(null, {title: tag.tags.title, artist: tag.tags.artist, album: tag.tags.album, track: tag.tags.track, picture: tag.tags.picture});
       },
       onError: error => {
         cb(error, null);
