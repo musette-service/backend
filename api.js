@@ -13,7 +13,7 @@ const file_accessor = require('./files-accessor');
 const crypto = require('crypto');
 
 router.get('/browse', (req, res) => {
-  file_accessor.files_r(settings.music_root, false, (err, files) => {
+  file_accessor.files_r(settings.music_root, false, 'audio/', (err, files) => {
     res.send(JSON.stringify(files));
   });
 });
@@ -24,7 +24,7 @@ router.get(['/browse/:file_path*', '/browse/:file_path'], (req, res) => {
       res.status(500).send();
       return;
   }
-  file_accessor.files_r(target_path, false, (err, files) => {
+  file_accessor.files_r(target_path, false, 'audio/', (err, files) => {
     res.send(JSON.stringify(files));
   });
 });
@@ -65,30 +65,45 @@ router.get(['/info/:file_path*', '/info/:file_path', '/info/'], (req, res) => {
       pending--;
       continue;
     }
-    file_accessor.readTags(target_path, (err, tags) => {
-      pending--;
-      if (err) {
-        console.log(err);
-        // 500
-        matches.tracks[i] = Object.assign({filename: path.join(base_path, req.query.tracks[i]), err: 500});
-        return;
-      }
-      matches.tracks[i] = Object.assign({filename: path.join(base_path, req.query.tracks[i])}, tags);
-      if (pending == 0) {
-        for (let i = 0; i < matches.tracks.length; i++) {
-          if (matches.tracks[i].picture) {
-            let hash = crypto.createHash('sha256');
-            hash.update(Uint8Array.from(matches.tracks[i].picture.data));
-            let val = hash.digest('hex');
-            // Only send the artwork if it was not included as part of the query
-            if (cached_art.indexOf(val) == -1 && !matches.art[val]) {
-              matches.art[val] = matches.tracks[i].picture;
-            }
-            matches.tracks[i].picture = val;
+    // Get any existing artwork in the directory
+    file_accessor.findArtwork(file_accessor.constrain(settings.music_root, base_path))
+    .then(result => {
+      let dir_artwork = result;
+      file_accessor.readTags(target_path, (err, tags) => {
+        pending--;
+        if (err) {
+          if (err.type == 'tagFormat') {
+            // Couldn't read tags so we'll just send the filename back
+            matches.tracks[i] = Object.assign({filename: path.join(base_path, req.query.tracks[i])}, {});
+          } else {
+            // Error on our side
+            matches.tracks[i] = Object.assign({filename: path.join(base_path, req.query.tracks[i]), err: 500});
+            console.log(err);
           }
+        } else {
+          matches.tracks[i] = Object.assign({filename: path.join(base_path, req.query.tracks[i])}, tags);
         }
-        res.send(JSON.stringify(matches));
-      }
+        if (pending == 0) {
+          for (let i = 0; i < matches.tracks.length; i++) {
+            if (matches.tracks[i].picture) {
+              let hash = crypto.createHash('sha256');
+              hash.update(Uint8Array.from(matches.tracks[i].picture.data));
+              let val = hash.digest('hex');
+              // Only send the artwork if it was not included as part of the query
+              if (cached_art.indexOf(val) == -1 && !matches.art[val]) {
+                matches.art[val] = matches.tracks[i].picture;
+              }
+              matches.tracks[i].picture = val;
+            } else if (dir_artwork) {
+              if (cached_art.indexOf(dir_artwork.hash) == -1 && !matches.art[dir_artwork.hash]) {
+                matches.art[dir_artwork.hash] = dir_artwork;
+              }
+              matches.tracks[i].picture = dir_artwork.hash;
+            }
+          }
+          res.send(JSON.stringify(matches));
+        }
+      });
     });
   }
 });

@@ -8,6 +8,7 @@ const path        = require('path');
 const settings    = require('./settings');
 const jsmediatags = require('jsmediatags');
 const mime        = require('mime-types');
+const crypto      = require('crypto');
 
 module.exports = {
   getAbsolute: (root, target_path) => {
@@ -23,7 +24,38 @@ module.exports = {
   isConfined: (root, full_path) => {
     return full_path.startsWith(root);
   },
-  files_r: (base_path, recurse, cb) => {
+  art_cache: {},
+  findArtwork: (base_path) => {
+    return new Promise((resolve, reject) => {
+      if (module.exports.art_cache[base_path] !== undefined) {
+        resolve(module.exports.art_cache[base_path]);
+      } else {
+        module.exports.files_r(base_path, false, 'image/', (err, files) => {
+          if (err) {
+            module.exports.art_cache[base_path] = false;
+            resolve(module.exports.art_cache[base_path]);
+          } else {
+            fs.readFile(path.join(base_path, files[0].path), (err, data) => {
+              if (err) {
+                module.exports.art_cache[base_path] = false;
+              } else {
+                let hash = crypto.createHash('sha256');
+                hash.update(Uint8Array.from(data));
+                let val = hash.digest('hex');
+                module.exports.art_cache[base_path] = {
+                  hash: val,
+                  format: files[0].mimetype,
+                  data: Array.prototype.slice.call(data, 0)
+                }
+              }
+              resolve(module.exports.art_cache[base_path]);
+            });
+          }
+        });
+      }
+    });
+  },
+  files_r: (base_path, recurse, mimetype, cb) => {
     fsPromises.readdir(base_path)
     .then(items => {
       items = items.filter(item => {
@@ -36,7 +68,7 @@ module.exports = {
           .then((stats) => {
             if (stats.isDirectory()) {
               if (recurse) {
-                module.exports.files_r(total_path, recurse, (err, files) => {
+                module.exports.files_r(total_path, recurse, mimetype, (err, files) => {
                   if (err) {
                     reject(err);
                     return;
@@ -48,10 +80,10 @@ module.exports = {
               }
             } else {
               let mime_type = mime.lookup(item);
-              if (!mime_type || !mime_type.startsWith('audio/')) {
+              if (!mime_type || !mime_type.startsWith(mimetype)) {
                 resolve();
               } else {
-                resolve({path: item});
+                resolve({path: item, mimetype: mime_type});
               }
             }
           })
@@ -126,7 +158,6 @@ module.exports = {
           }));
         })
         .then((tags) => {
-          console.log(tags);
           cb(null, tags);
         })
         .catch((err) => {
