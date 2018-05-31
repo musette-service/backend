@@ -108,4 +108,24 @@ router.get(['/info/:file_path*', '/info/:file_path', '/info/'], (req, res) => {
   }
 });
 
+router.get('/', (req, res) => {
+  // Send our API capabilities and requirements here
+  // Note: this would probably be populated through modules, such as:
+  // module {
+  //  routes: '/': (req, res) => { }
+  //  capabilities: [{name: 'browse'}],
+  //  client_requires: [{ name: "auth", min: "1.0.0" }],
+  // }
+  res.send(JSON.stringify({
+    "min_version": "1.0.0",
+    "capabilities": [
+      "browse",
+      "info",
+      "play"
+    ],
+    "requires": [
+    ]
+  }));
+});
+
 module.exports = router;
