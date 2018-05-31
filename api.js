@@ -116,16 +116,7 @@ router.get('/', (req, res) => {
   //  capabilities: [{name: 'browse'}],
   //  client_requires: [{ name: "auth", min: "1.0.0" }],
   // }
-  res.send(JSON.stringify({
-    "min_version": "1.0.0",
-    "capabilities": [
-      "browse",
-      "info",
-      "play"
-    ],
-    "requires": [
-    ]
-  }));
+  res.send(JSON.stringify(module.parent.api_settings));
 });
 
 module.exports = router;
