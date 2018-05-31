@@ -24,6 +24,20 @@ const SimpleAuthPlugin = {
         }));
       }
     }],
+    [["GET"], "auth/logout", (req, res) => {
+      if (req.session.isValid) {
+        req.session.isValid = false;
+        res.status(200).send(JSON.stringify({
+          status: 200,
+          message: "OK"
+        }));
+      } else {
+        res.status(403).send(JSON.stringify({
+          status: 403,
+          message: "NOT LOGGED IN"
+        }));
+      }
+    }],
     ["*", ["/api/:all", "/api"], (req, res, next) => {
       if (!req.session.isValid) {
         res.status(401).send(JSON.stringify({
