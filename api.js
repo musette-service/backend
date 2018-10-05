@@ -42,9 +42,15 @@ router.get(['/play/:file_path*', '/play/:file_path'], (req, res) => {
     }
     res.status(200);
 
-    res.sendSeekable(stream.pipe(brake({rate: 256000, period: 1000})), {
-      length: stream.size
-    });
+    if (typeof settings.throttle === 'undefined') {
+      res.sendSeekable(stream, {
+        length: stream.size
+      });
+    } else {
+      res.sendSeekable(stream.pipe(brake(settings.throttle*1000, 1000)), {
+        length: stream.size
+      });
+    }
   });
 });
 
