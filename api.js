@@ -11,15 +11,14 @@ const settings = require('./settings');
 const file_accessor = require('./files-accessor');
 
 const crypto = require('crypto');
-
-router.get('/browse', (req, res) => {
+router.get('/browse%2F', (req, res) => {
   file_accessor.files_r(settings.music_root, false, 'audio/', (err, files) => {
     res.send(JSON.stringify(files));
   });
 });
 
-router.get(['/browse/:file_path*', '/browse/:file_path'], (req, res) => {
-  let target_path = file_accessor.constrain(settings.music_root, path.join(req.params.file_path, req.params[0]));
+router.get(['/browse%2F:file_path*', '/browse%2F:file_path'], (req, res) => {
+  let target_path = file_accessor.constrain(settings.music_root, decodeURIComponent(path.join(req.params.file_path, req.params[0])));
   if (!target_path) {
       res.status(500).send();
       return;
@@ -29,8 +28,8 @@ router.get(['/browse/:file_path*', '/browse/:file_path'], (req, res) => {
   });
 });
 
-router.get(['/play/:file_path*', '/play/:file_path'], (req, res) => {
-  let target_path = file_accessor.constrain(settings.music_root, path.join(req.params.file_path, req.params[0]));
+router.get(['/play%2F:file_path*', '/play%2F:file_path'], (req, res) => {
+  let target_path = file_accessor.constrain(settings.music_root, decodeURIComponent(path.join(req.params.file_path, req.params[0])));
   if (!target_path) {
       res.status(400).send();
       return;
@@ -54,8 +53,8 @@ router.get(['/play/:file_path*', '/play/:file_path'], (req, res) => {
   });
 });
 
-router.get(['/info/:file_path*', '/info/:file_path', '/info/'], (req, res) => {
-  let base_path = req.params.file_path ? path.join(req.params.file_path, req.params[0]) : '';
+router.get(['/info%2F:file_path*', '/info%2F:file_path', '/info%2F'], (req, res) => {
+  let base_path = req.params.file_path ? decodeURIComponent(path.join(req.params.file_path, req.params[0])) : '';
   let cached_art = req.query.art || [];
 
   let pending = req.query.tracks.length;
@@ -84,7 +83,6 @@ router.get(['/info/:file_path*', '/info/:file_path', '/info/'], (req, res) => {
           } else {
             // Error on our side
             matches.tracks[i] = Object.assign({filename: path.join(base_path, req.query.tracks[i]), err: 500});
-            console.log(err);
           }
         } else {
           matches.tracks[i] = Object.assign({filename: path.join(base_path, req.query.tracks[i])}, tags);
