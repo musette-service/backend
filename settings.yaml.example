@@ -1,0 +1,14 @@
+# web_root is where the musette frontend data is stored for rendering the web UI. If musette is installed system-wide and this is omitted, it will default to $(PREFIX)/share/musette/client. If not installed, it defaults to ../client.
+web_root: /usr/local/share/musette/client
+# music_root is the root location from which to load music files.
+music_root: /srv/music
+# port to listen on
+port: 8080
+## plugins_root is an optional field that allows either relative or absolute path specification. If musette is installed system-wide and this is omitted, it will default to $(PREFIX)/share/musette/plugins. If not installed, it defaults to ./plugins.
+plugins_root: my_plugin_dir
+plugins:
+  simple-auth:
+    username: musette
+    password: musette
+# throttle based on KB
+#throttle: 256
