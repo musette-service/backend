@@ -1,0 +1,15 @@
+[Unit]
+Description=Musette
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/musette
+Restart=on-failure
+User=musette
+Group=musette
+Environment=PATH=/usr/bin:/usr/local/bin
+
+[Install]
+WantedBy=multi-user.target
+
