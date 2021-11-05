@@ -4,6 +4,10 @@
 music_root: /srv/music
 # port to listen on
 port: 8080
+# cors defines various cors properties. See the expressjs cors middleware's configuration options: https://expressjs.com/en/resources/middleware/cors.html
+#cors:
+#  origin: http://myfrontend.net
+#  credentials: true
 ## plugins_root is an optional field that allows either relative or absolute path specification. If musette is installed system-wide and this is omitted, it will default to $(PREFIX)/share/musette/plugins. If not installed, it defaults to ./plugins.
 #plugins_root: my_plugin_dir
 #plugins:
