@@ -125,7 +125,7 @@ module.exports = function (settings, server, logger) {
             return res.status(400).send("bad sort")
           }
         }
-        results = results.map(({title, cover, year, $loki})=>({title, cover, year, id: $loki}))
+        results = results.map(({title, cover, year, artist, $loki})=>({title, cover, year, artist, id: $loki}))
         res.status(200).send(
           results.data({removeMeta: true}),
         )
