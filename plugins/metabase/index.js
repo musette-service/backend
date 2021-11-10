@@ -60,7 +60,7 @@ async function processFile(f, {music_root, albums, tracks, covers, images}) {
     const coverData = mm.selectCover(results.common.picture)
     if (coverData) {
       let cover = covers.insert({
-        data: coverData,
+        data: coverData.data,
         mimetype: coverData.format,
         album: album.$loki
       })
@@ -167,7 +167,9 @@ module.exports = function (settings, server, logger) {
           return res.status(404).send("no matching album cover")
         }
         res.contentType(cover.mimetype)
-        res.status(200).end(cover.data)
+        res.status(200)
+        res.send(cover.data)
+        res.end()
       }],
     ],
     load: async () => {
